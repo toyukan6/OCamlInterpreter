@@ -6,3 +6,4 @@
 *.mli
 *.output
 miniml
+.depend
