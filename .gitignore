@@ -5,5 +5,7 @@
 *.cmx
 *.mli
 *.output
+lexer.ml
+parser.ml
 miniml
 .depend
