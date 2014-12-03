@@ -1,0 +1,8 @@
+*.cmo
+*.out
+*.o
+*.cmi
+*.cmx
+*.mli
+*.output
+miniml
