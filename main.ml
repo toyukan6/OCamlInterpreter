@@ -31,6 +31,11 @@ let initial_env =
        (Environment.extend "x" (IntV 10)
            (Environment.extend "ii" (IntV 2)
                (Environment.extend "iii" (IntV 3)
-		  (Environment.extend "iv" (IntV 4) Environment.empty)))))
+		  (Environment.extend "iv" (IntV 4)
+		     (Environment.extend "(+)" (ProcV ("a", FunExp (["b"], BinOp (Plus, (Var "a"), (Var "b"))), ref Environment.empty)) 
+			(Environment.extend "(<)" (ProcV ("a", FunExp (["b"], BinOp (Lt, (Var "a"), (Var "b"))), ref Environment.empty)) 
+			   (Environment.extend "(&&)" (ProcV ("a", FunExp (["b"], BinOp (And, (Var "a"), (Var "b"))), ref Environment.empty)) 
+			      (Environment.extend "(||)" (ProcV ("a", FunExp (["b"], BinOp (Or, (Var "a"), (Var "b"))), ref Environment.empty)) 
+				 (Environment.extend "(*)" (ProcV ("a", FunExp (["b"], BinOp (Mult, (Var "a"), (Var "b"))), ref Environment.empty)) Environment.empty))))))))))
 
 let _ = read_eval_print initial_env

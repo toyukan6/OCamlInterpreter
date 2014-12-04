@@ -4,7 +4,9 @@ open List
 type exval = 
     IntV of int
   | BoolV of bool
-  | ProcV of id * exp * dnval Environment.t
+  | ListV of exval list
+  | ProcV of id * exp * dnval Environment.t ref
+  | DProcV of id * exp
 and dnval = exval
 
 exception Error of string
@@ -15,6 +17,9 @@ let err s = raise (Error s)
 let rec string_of_exval = function
     IntV i -> string_of_int i
   | BoolV b -> string_of_bool b
+  | ListV l -> "[" ^ fold_right (fun x y -> (string_of_exval x) ^ "," ^ y) l "]"
+  | ProcV (_,_,_) -> ""
+  | DProcV (_,_) -> ""
 
 let pp_val v = print_string (string_of_exval v)
 
@@ -26,9 +31,12 @@ let rec apply_prim op arg1 arg2 = match op, arg1, arg2 with
   | Lt, IntV i1, IntV i2 -> BoolV (i1 < i2)
   | Lt, _, _ -> err ("Both arguments must be integer: <")
   | And, BoolV b1, BoolV b2 -> BoolV (b1 && b2)
-  | And, _, _ -> err ("Both arguments must be integer: &&")
+  | And, _, _ -> err ("Both arguments must be bool: &&")
   | Or, BoolV b1, BoolV b2 -> BoolV (b1 || b2)
-  | Or, _, _ -> err ("Both arguments must be integer: ||")
+  | Or, _, _ -> err ("Both arguments must be bool: ||")
+  | Cons, IntV i, ListV l -> ListV ((IntV i) :: l)
+  | Cons, BoolV b, ListV l -> ListV ((BoolV b) :: l)
+  | Cons, _, _ -> err ("Both arguments must be equal: ::") 
 
 let uncurry f = fun (x, y) -> f x y
 
@@ -38,6 +46,7 @@ let rec eval_exp env = function
         Environment.Not_bound -> err ("Variable not bound: " ^ x))
   | ILit i -> IntV i
   | BLit b -> BoolV b
+  | LLit l -> ListV (map (eval_exp env) l)
   | BinOp (op, exp1, exp2) -> 
       let arg1 = eval_exp env exp1 in
       let arg2 = eval_exp env exp2 in
@@ -48,16 +57,60 @@ let rec eval_exp env = function
             BoolV true -> eval_exp env exp2 
           | BoolV false -> eval_exp env exp3
           | _ -> err ("Test expression must be boolean: if"))
+  | MatchExp (exp, cond) ->
+    (let test = eval_exp env exp1 in
+     let rec condEqual t c e =
+       match (t, c) with
+	   (IntV var1, IntCond var2)
+	 | (BoolV var1, BoolV var2) -> (var1 = var2, e)
+	 | (var1, VarCond id) -> (true, Environment.extend id var1 e)
+	 | (ListV [], NullCondList) -> (true, e)
+	 | (ListV (head :: tail), ListCond (hc :: tc)) ->
+	   let (b, newenv) = condEqual head hc e in
+	   if b then condEqual tail tc newenv else (false, e)
+	 | _ -> (false, e) in
+     let rec searchcond list =
+       match list with
+	 [] -> err "Match pattern does not exist"
+       | (c, e) :: t ->
+	 let (b, newenv) = condEqual test c env in
+	 if b then eval_exp newenv e else searchcond t in
+     searchcond cond)
   | LetExp (list, exp2) ->
-    let elist = map (fun (id, exp) -> (id, eval_exp env exp)) list in
+    let eval_list = function
+        ([], exp) -> err ("give me id : LetExp")
+      | ([i], exp) -> (i, eval_exp env exp)
+      | (i :: rest, exp) -> (i, eval_exp env (FunExp (rest, exp))) in
+    let elist = map eval_list list in
       eval_exp (fold_right (uncurry Environment.extend) elist env) exp2
-  | FunExp (id, exp) -> ProcV (id, exp, env)
+  | LetRecExp (list, exp) ->
+    (let dummyenv = ref Environment.empty in
+     let eval_list (i, p, e) =
+       match (p, e) with
+	   ([], FunExp ([h], exp))
+	 | ([h], exp) -> (i, ProcV (h, exp, dummyenv))
+	 | ([], FunExp ((h :: t), exp))
+	 | ((h :: t), exp) -> (i, ProcV (h, FunExp(t, exp), dummyenv))
+	 | _ -> err ("something wrong : LetRecExp") in
+     let elist = map eval_list list in
+     let newenv = fold_right (uncurry Environment.extend) elist env in
+     dummyenv := newenv;
+     eval_exp newenv exp)
+  | FunExp ([], exp) -> err ("this is not function")
+  | FunExp ([id], exp) -> ProcV (id, exp, ref env)
+  | FunExp ((id :: rest), exp) -> ProcV (id, FunExp (rest, exp), ref env)
+  | DFunExp ([], exp) -> err ("this is not function")
+  | DFunExp ([id], exp) -> DProcV (id, exp)
+  | DFunExp ((id :: rest), exp) -> DProcV (id, FunExp (rest, exp))
   | AppExp (exp1, exp2) ->
-      let funval = eval_exp env exp1 in
-      let arg = eval_exp env exp2 in
+      let funval = eval_exp env exp1
+      and arg = eval_exp env exp2 in
         (match funval with
 	    ProcV (id, body, env') ->
-	      let newenv = Environment.extend id arg env' in
+	      let newenv = Environment.extend id arg !env' in
+                eval_exp newenv body
+	  | DProcV (id, body) ->
+	      let newenv = Environment.extend id arg env in
                 eval_exp newenv body
 	  | _ -> err ("Non-function value is applied"))
     
@@ -65,10 +118,27 @@ let rec eval_exp env = function
 let rec eval_decl env = function
     Exp e -> let v = eval_exp env e in ([("-", v)], env)
   | Decl (list, opt) ->
-      let elist = map (fun (id, exp) -> (id, eval_exp env exp)) list in
-      let newenv = fold_right (uncurry Environment.extend) elist env in
-        match opt with
-            None -> (elist, newenv)
-	  | Some e2 ->
-	      let (list', env') = eval_decl newenv e2 in
-	      (elist @ list', env')
+    (let eval_list = function
+        ([], exp) -> ("-", eval_exp env exp)
+      | ([i], exp) -> (i, eval_exp env exp)
+      | (i :: rest, exp) -> (i, eval_exp env (FunExp (rest, exp))) in
+     let elist = map eval_list list in
+     let newenv = fold_right (uncurry Environment.extend) elist env in
+     match opt with
+         None -> (elist, newenv)
+       | Some e2 ->
+	 let (list', env') = eval_decl newenv e2 in
+	 (elist @ list', env'))
+  | RecDecl list ->
+    (let dummyenv = ref Environment.empty in
+     let eval_list (i, p, e) =
+       match (p, e) with
+	   ([], FunExp ([h], exp))
+	 | ([h], exp) -> (i, ProcV (h, exp, dummyenv))
+	 | ([], FunExp ((h :: t), exp))
+	 | ((h :: t), exp) -> (i, ProcV (h, FunExp(t, exp), dummyenv))
+	 | _ -> err ("something wrong : LetRecExp") in
+     let elist = map eval_list list in
+     let newenv = fold_right (uncurry Environment.extend) elist env in
+     dummyenv := newenv;
+     (elist, newenv))
