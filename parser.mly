@@ -113,14 +113,22 @@ Pattern :
   | Condition RARROW Expr { [($1, $3)] }
 
 Condition :
+    ValueCondition { $1 }
+  | ValueCondition CONS ConsCondition { ListCond ($1 :: $3) }
+  | LBRACKET SemiCondition RBRACKET { SemiListCond $2 }
+
+ValueCondition :
     INTV { IntCond $1 }
   | TRUE { BoolCond true }
   | FALSE { BoolCond false }
   | ID { VarCond $1 }
-  | ListCondition { ListCond $1 }
-  | LPAREN ListCondition RPAREN { ListCond $2 }
   | LBRACKET RBRACKET { NullListCond }
 
-ListCondition :
-    Condition CONS ListCond { $1 :: $3 }
-  | Condition { [$1] }
+ConsCondition :
+    ValueCondition CONS ConsCondition { $1 :: $3 }
+  | ValueCondition { [$1] }
+
+SemiCondition :
+    ValueCondition SEMI SemiCondition { $1 :: $3 }
+  | ValueCondition { [$1] }
+

@@ -17,11 +17,17 @@ let err s = raise (Error s)
 let rec string_of_exval = function
     IntV i -> string_of_int i
   | BoolV b -> string_of_bool b
-  | ListV l -> "[" ^ fold_right (fun x y -> (string_of_exval x) ^ "," ^ y) l "]"
+  | ListV l ->
+    (match l with
+	[] -> "[]"
+      | [h] -> "[" ^ string_of_exval h ^ "]"
+      | h :: t -> "[" ^ string_of_exval h ^ fold_right (fun x y -> ";" ^ (string_of_exval x) ^ y) t "]")
   | ProcV (_,_,_) -> ""
   | DProcV (_,_) -> ""
 
-let pp_val v = print_string (string_of_exval v)
+let pp_val v =
+  print_string (string_of_exval v);
+  print_newline ()
 
 let rec apply_prim op arg1 arg2 = match op, arg1, arg2 with
     Plus, IntV i1, IntV i2 -> IntV (i1 + i2)
@@ -58,16 +64,28 @@ let rec eval_exp env = function
           | BoolV false -> eval_exp env exp3
           | _ -> err ("Test expression must be boolean: if"))
   | MatchExp (exp, cond) ->
-    (let test = eval_exp env exp1 in
+    (let test = eval_exp env exp in
      let rec condEqual t c e =
        match (t, c) with
-	   (IntV var1, IntCond var2)
-	 | (BoolV var1, BoolV var2) -> (var1 = var2, e)
+	   (IntV var1, IntCond var2) -> (var1 = var2, e)
+	 | (BoolV var1, BoolCond var2) -> (var1 = var2, e)
 	 | (var1, VarCond id) -> (true, Environment.extend id var1 e)
-	 | (ListV [], NullCondList) -> (true, e)
+	 | (ListV [], NullListCond) -> (true, e)
+	 | (ListV _ as l, ListCond [VarCond id]) -> (true, Environment.extend id l e)
 	 | (ListV (head :: tail), ListCond (hc :: tc)) ->
 	   let (b, newenv) = condEqual head hc e in
-	   if b then condEqual tail tc newenv else (false, e)
+	   if b then condEqual (ListV tail) (ListCond tc) newenv else (false, e)
+	 | (ListV l, SemiListCond [VarCond id]) ->
+	   (match l with
+	       [x] -> (true, Environment.extend id x e)
+	     | _ -> (false, e))
+	 | (ListV l, SemiListCond cond) ->
+	   (try
+	      let clist = combine l cond in
+	      let (b, newenv) =
+		fold_right (fun (ex, co) (bo, en) -> let (boo, nen) = condEqual ex co en in (boo && bo, nen)) clist (true, e) in
+	      if b then (true, newenv) else (false, e)
+	    with Invalid_argument _ -> (false, e))
 	 | _ -> (false, e) in
      let rec searchcond list =
        match list with

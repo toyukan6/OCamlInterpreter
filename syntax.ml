@@ -11,6 +11,22 @@ type cond =
   | VarCond of string
   | NullListCond
   | ListCond of cond list
+  | SemiListCond of cond list
+
+let rec string_of_cond = function
+    IntCond i -> string_of_int i
+  | BoolCond b -> string_of_bool b
+  | VarCond v -> v
+  | NullListCond -> "[]"
+  | ListCond l
+  | SemiListCond l ->
+    (match l with
+	[] -> "[]"
+      | h :: t -> "[" ^ string_of_cond h ^ List.fold_right (fun x y -> ";" ^ (string_of_cond x) ^ y) t "]")
+
+let pp_cond c =
+  print_string (string_of_cond c);
+  print_newline ();
 
 type exp =
     Var of id
