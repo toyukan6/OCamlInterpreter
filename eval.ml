@@ -97,29 +97,26 @@ let rec eval_exp env = function
   | LetExp (list, exp2) ->
     let eval_list = function
         ([], exp) -> err ("give me id : LetExp")
-      | ([i], exp) -> (i, eval_exp env exp)
       | (i :: rest, exp) -> (i, eval_exp env (FunExp (rest, exp))) in
     let elist = map eval_list list in
       eval_exp (fold_right (uncurry Environment.extend) elist env) exp2
   | LetRecExp (list, exp) ->
     (let dummyenv = ref Environment.empty in
-     let eval_list (i, p, e) =
-       match (p, e) with
-	   ([], FunExp ([h], exp))
-	 | ([h], exp) -> (i, ProcV (h, exp, dummyenv))
-	 | ([], FunExp ((h :: t), exp))
-	 | ((h :: t), exp) -> (i, ProcV (h, FunExp(t, exp), dummyenv))
-	 | _ -> err ("something wrong : LetRecExp") in
+     let eval_list = function
+         ([], exp) -> err ("give me id : LetRecExp")
+       | ([i], FunExp (h :: t, exp))
+       | (i :: h :: t, exp) -> (i, ProcV (h, FunExp (t, exp), dummyenv))
+       | ([i], exp) -> (i, eval_exp env exp) in
      let elist = map eval_list list in
      let newenv = fold_right (uncurry Environment.extend) elist env in
      dummyenv := newenv;
      eval_exp newenv exp)
-  | FunExp ([], exp) -> err ("this is not function")
+  | FunExp ([], exp) -> eval_exp env exp
   | FunExp ([id], exp) -> ProcV (id, exp, ref env)
-  | FunExp ((id :: rest), exp) -> ProcV (id, FunExp (rest, exp), ref env)
-  | DFunExp ([], exp) -> err ("this is not function")
+  | FunExp (id :: rest, exp) -> ProcV (id, FunExp (rest, exp), ref env)
+  | DFunExp ([], exp) -> eval_exp env exp
   | DFunExp ([id], exp) -> DProcV (id, exp)
-  | DFunExp ((id :: rest), exp) -> DProcV (id, FunExp (rest, exp))
+  | DFunExp (id :: rest, exp) -> DProcV (id, FunExp (rest, exp))
   | AppExp (exp1, exp2) ->
       let funval = eval_exp env exp1
       and arg = eval_exp env exp2 in
@@ -149,13 +146,11 @@ let rec eval_decl env = function
 	 (elist @ list', env'))
   | RecDecl list ->
     (let dummyenv = ref Environment.empty in
-     let eval_list (i, p, e) =
-       match (p, e) with
-	   ([], FunExp ([h], exp))
-	 | ([h], exp) -> (i, ProcV (h, exp, dummyenv))
-	 | ([], FunExp ((h :: t), exp))
-	 | ((h :: t), exp) -> (i, ProcV (h, FunExp(t, exp), dummyenv))
-	 | _ -> err ("something wrong : LetRecExp") in
+     let eval_list = function
+         ([], exp) -> err ("give me id : LetRecExp")
+       | ([i], FunExp (h :: t, exp))
+       | (i :: h :: t, exp) -> (i, ProcV (h, FunExp (t, exp), dummyenv))
+       | ([i], exp) -> (i, eval_exp env exp) in
      let elist = map eval_list list in
      let newenv = fold_right (uncurry Environment.extend) elist env in
      dummyenv := newenv;

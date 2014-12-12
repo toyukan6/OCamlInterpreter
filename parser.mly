@@ -23,11 +23,7 @@ toplevel :
 LetDecl :
     LET Decl LetDecl { Decl ($2, Some $3) }
   | LET Decl { Decl ($2, None) }
-  | LET REC RecDecl { RecDecl ($3) }
-
-RecDecl :
-    ID IDList EQ Expr AND RecDecl { ($1, $2, $4) :: $6 }
-  | ID IDList EQ Expr { [($1, $2, $4)] }
+  | LET REC Decl { RecDecl ($3) }
 
 Decl :
     IDList EQ Expr AND Decl { ($1, $3) :: $5 }
@@ -46,7 +42,7 @@ IDList :
 
 LetExpr :
     LET Decl IN Expr { LetExp ($2, $4) }
-  | LET REC RecDecl IN Expr { LetRecExp ($3, $5) }
+  | LET REC Decl IN Expr { LetRecExp ($3, $5) }
       
 ORExpr :
     ANDExpr ORB ANDExpr { BinOp (Or, $1, $3) }

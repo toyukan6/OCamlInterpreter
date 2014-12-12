@@ -36,7 +36,7 @@ type exp =
   | BinOp of binOp * exp * exp
   | IfExp of exp * exp * exp
   | LetExp of (id list * exp) list * exp
-  | LetRecExp of (id * id list * exp) list * exp
+  | LetRecExp of (id list * exp) list * exp
   | FunExp of id list * exp
   | DFunExp of id list * exp
   | AppExp of exp * exp
@@ -45,4 +45,42 @@ type exp =
 type program = 
     Exp of exp
   | Decl of (id list * exp) list * program option
-  | RecDecl of (id * id list * exp) list;;
+  | RecDecl of (id list * exp) list;;
+
+type tyvar = int
+
+type ty =
+    TyInt
+  | TyBool
+  | TyList of ty
+  | TyVar of tyvar
+  | TyFun of ty * ty
+
+(* pretty printing *)
+let rec pp_ty = function
+    TyInt -> print_string "int"
+  | TyBool -> print_string "bool"
+  | TyList l -> pp_ty l; print_string " list"
+  | TyVar v -> print_string ("'" ^ (Char.escaped (char_of_int (v + 97))))
+  | TyFun (ty1, ty2) ->
+    (match ty1 with
+	TyFun _ ->
+	  print_string "(";
+	  pp_ty ty1;
+	  print_string ")"
+      | _ -> pp_ty ty1);
+    print_string "->";
+    pp_ty ty2
+
+let fresh_tyvar =
+  let counter = ref 0 in
+  let body () =
+    let v = !counter in
+    counter := v + 1; v
+  in body
+
+let rec freevar_ty ty =
+  match ty with
+      TyVar v -> MySet.singleton v
+    | TyFun (t1, t2) -> MySet.union (freevar_ty t1) (freevar_ty t2)
+    | _ -> MySet.empty
