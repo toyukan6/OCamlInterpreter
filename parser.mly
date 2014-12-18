@@ -69,7 +69,16 @@ MExpr :
   | AppExpr { $1 }
 
 AppExpr :
-    AppExpr AExpr { AppExp ($1, $2) }
+    FunName AppExpr2 { make_app $1 $2 }
+  | AExpr { $1 }
+
+FunName :
+    ID { Var $1 }
+  | LPAREN Operator RPAREN { Var $2 }
+  | LPAREN AppExpr RPAREN { $2 }
+
+AppExpr2 :
+    AppExpr2 AExpr { AppExp ($1, $2) }
   | AExpr { $1 }
 
 AExpr :

@@ -16,7 +16,6 @@ let rec read_eval_print env tyenv =
 	pp_ty ty;
 	print_string " = ";
 	pp_val v;
-	print_newline();
 	print_value (rest, trest)
       | _ -> print_string "something wrong"
     in print_value (list, tylist);
@@ -41,12 +40,12 @@ let initial_env =
            (Environment.extend "ii" (IntV 2)
                (Environment.extend "iii" (IntV 3)
 		  (Environment.extend "iv" (IntV 4)
-		     (Environment.extend "(+)" (ProcV ("a", FunExp (["b"], BinOp (Plus, (Var "a"), (Var "b"))), ref Environment.empty))
-			(Environment.extend "(<)" (ProcV ("a", FunExp (["b"], BinOp (Lt, (Var "a"), (Var "b"))), ref Environment.empty))
-			   (Environment.extend "(&&)" (ProcV ("a", FunExp (["b"], BinOp (And, (Var "a"), (Var "b"))), ref Environment.empty))
-			      (Environment.extend "(||)" (ProcV ("a", FunExp (["b"], BinOp (Or, (Var "a"), (Var "b"))), ref Environment.empty))
-				 (Environment.extend "(::)" (ProcV ("a", FunExp (["b"], BinOp (Cons, (Var "a"), (Var "b"))), ref Environment.empty))
-				    (Environment.extend "(*)" (ProcV ("a", FunExp (["b"], BinOp (Mult, (Var "a"), (Var "b"))), ref Environment.empty)) Environment.empty)))))))))))
+		     (Environment.extend "+" (ProcV ("a", FunExp (["b"], BinOp (Plus, (Var "a"), (Var "b"))), ref Environment.empty))
+			(Environment.extend "<" (ProcV ("a", FunExp (["b"], BinOp (Lt, (Var "a"), (Var "b"))), ref Environment.empty))
+			   (Environment.extend "&&" (ProcV ("a", FunExp (["b"], BinOp (And, (Var "a"), (Var "b"))), ref Environment.empty))
+			      (Environment.extend "||" (ProcV ("a", FunExp (["b"], BinOp (Or, (Var "a"), (Var "b"))), ref Environment.empty))
+				 (Environment.extend "::" (ProcV ("a", FunExp (["b"], BinOp (Cons, (Var "a"), (Var "b"))), ref Environment.empty))
+				    (Environment.extend "*" (ProcV ("a", FunExp (["b"], BinOp (Mult, (Var "a"), (Var "b"))), ref Environment.empty)) Environment.empty)))))))))))
 
 let initial_tyenv = 
   Environment.extend "i" TyInt
@@ -55,10 +54,10 @@ let initial_tyenv =
            (Environment.extend "ii" TyInt
                (Environment.extend "iii" TyInt
 		  (Environment.extend "iv" TyInt
-		     (Environment.extend "(+)" (TyFun (TyInt, TyFun (TyInt, TyInt)))
-			(Environment.extend "(<)" (TyFun (TyInt, TyFun (TyInt, TyBool)))
-			   (Environment.extend "(&&)" (TyFun (TyBool, TyFun (TyBool, TyBool)))
-			      (Environment.extend "(||)" (TyFun (TyBool, TyFun (TyBool, TyBool)))
-				    (Environment.extend "(*)" (TyFun (TyInt, TyFun (TyInt, TyInt))) Environment.empty))))))))))
+		     (Environment.extend "+" (TyFun (TyInt, TyFun (TyInt, TyInt)))
+			(Environment.extend "<" (TyFun (TyInt, TyFun (TyInt, TyBool)))
+			   (Environment.extend "&&" (TyFun (TyBool, TyFun (TyBool, TyBool)))
+			      (Environment.extend "||" (TyFun (TyBool, TyFun (TyBool, TyBool)))
+				    (Environment.extend "*" (TyFun (TyInt, TyFun (TyInt, TyInt))) Environment.empty))))))))))
 (*(Environment.extend "(::)" (TyFunc (TyVar, TyFunc (TyInt, TyInt)))*)
 let _ = read_eval_print initial_env initial_tyenv

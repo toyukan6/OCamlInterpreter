@@ -26,7 +26,7 @@ let rec string_of_cond = function
 
 let pp_cond c =
   print_string (string_of_cond c);
-  print_newline ();
+  print_newline ()
 
 type exp =
     Var of id
@@ -41,6 +41,10 @@ type exp =
   | DFunExp of id list * exp
   | AppExp of exp * exp
   | MatchExp of exp * (cond * exp) list
+
+let make_app v = function
+    AppExp (e1, e2) -> AppExp (AppExp (v, e1), e2)
+  | e -> AppExp (v, e)
 
 type program = 
     Exp of exp
@@ -83,4 +87,5 @@ let rec freevar_ty ty =
   match ty with
       TyVar v -> MySet.singleton v
     | TyFun (t1, t2) -> MySet.union (freevar_ty t1) (freevar_ty t2)
+    | TyList t -> freevar_ty t
     | _ -> MySet.empty

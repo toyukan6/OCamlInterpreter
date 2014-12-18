@@ -22,8 +22,8 @@ let rec string_of_exval = function
 	[] -> "[]"
       | [h] -> "[" ^ string_of_exval h ^ "]"
       | h :: t -> "[" ^ string_of_exval h ^ fold_right (fun x y -> ";" ^ (string_of_exval x) ^ y) t "]")
-  | ProcV (_,_,_) -> ""
-  | DProcV (_,_) -> ""
+  | ProcV (_,_,_) -> "<fun>"
+  | DProcV (_,_) -> "<fun>"
 
 let pp_val v =
   print_string (string_of_exval v);
