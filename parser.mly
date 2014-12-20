@@ -2,7 +2,7 @@
 open Syntax
 %}
 
-%token LPAREN RPAREN SEMISEMI LBRACKET RBRACKET SEMI
+%token LPAREN RPAREN SEMISEMI LBRACKET RBRACKET SEMI UNDERBAR
 %token PLUS MULT LT ANDB ORB CONS
 %token IF THEN ELSE TRUE FALSE
 %token LET IN EQ AND REC
@@ -28,6 +28,7 @@ LetDecl :
 Decl :
     IDList EQ Expr AND Decl { ($1, $3) :: $5 }
   | IDList EQ Expr { [($1, $3)] }
+  | IDList EQ AExpr { [($1, $3)] }
 
 Expr :
     ORExpr { $1 }
@@ -43,7 +44,7 @@ IDList :
 LetExpr :
     LET Decl IN Expr { LetExp ($2, $4) }
   | LET REC Decl IN Expr { LetRecExp ($3, $5) }
-      
+
 ORExpr :
     ANDExpr ORB ANDExpr { BinOp (Or, $1, $3) }
   | ANDExpr { $1 }
@@ -69,16 +70,7 @@ MExpr :
   | AppExpr { $1 }
 
 AppExpr :
-    FunName AppExpr2 { make_app $1 $2 }
-  | AExpr { $1 }
-
-FunName :
-    ID { Var $1 }
-  | LPAREN Operator RPAREN { Var $2 }
-  | LPAREN AppExpr RPAREN { $2 }
-
-AppExpr2 :
-    AppExpr2 AExpr { AppExp ($1, $2) }
+    AppExpr AExpr { AppExp ($1, $2) }
   | AExpr { $1 }
 
 AExpr :
@@ -118,22 +110,26 @@ Pattern :
   | Condition RARROW Expr { [($1, $3)] }
 
 Condition :
+    NotConsCondition CONS ConsCondition { ListCond ($1 :: $3) }
+  | NotConsCondition { $1 }
+
+NotConsCondition :
     ValueCondition { $1 }
-  | ValueCondition CONS ConsCondition { ListCond ($1 :: $3) }
   | LBRACKET SemiCondition RBRACKET { SemiListCond $2 }
 
 ValueCondition :
     INTV { IntCond $1 }
   | TRUE { BoolCond true }
   | FALSE { BoolCond false }
+  | UNDERBAR { Underbar }
   | ID { VarCond $1 }
   | LBRACKET RBRACKET { NullListCond }
 
 ConsCondition :
-    ValueCondition CONS ConsCondition { $1 :: $3 }
-  | ValueCondition { [$1] }
+    NotConsCondition CONS ConsCondition { $1 :: $3 }
+  | NotConsCondition { [$1] }
 
 SemiCondition :
-    ValueCondition SEMI SemiCondition { $1 :: $3 }
-  | ValueCondition { [$1] }
+    Condition SEMI SemiCondition { $1 :: $3 }
+  | Condition { [$1] }
 

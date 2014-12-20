@@ -11,7 +11,7 @@ let rec read_eval_print env tyenv =
     let (list, newenv) = eval_decl env decl in
     let rec print_value = function
         ([], []) -> ()
-      | ((id, v) :: rest, ty :: trest) ->
+      | ((id, v) :: rest, (TyScheme (_, ty)) :: trest) ->
 	Printf.printf "val %s : " id;
 	pp_ty ty;
 	print_string " = ";
@@ -40,24 +40,28 @@ let initial_env =
            (Environment.extend "ii" (IntV 2)
                (Environment.extend "iii" (IntV 3)
 		  (Environment.extend "iv" (IntV 4)
-		     (Environment.extend "+" (ProcV ("a", FunExp (["b"], BinOp (Plus, (Var "a"), (Var "b"))), ref Environment.empty))
-			(Environment.extend "<" (ProcV ("a", FunExp (["b"], BinOp (Lt, (Var "a"), (Var "b"))), ref Environment.empty))
-			   (Environment.extend "&&" (ProcV ("a", FunExp (["b"], BinOp (And, (Var "a"), (Var "b"))), ref Environment.empty))
-			      (Environment.extend "||" (ProcV ("a", FunExp (["b"], BinOp (Or, (Var "a"), (Var "b"))), ref Environment.empty))
-				 (Environment.extend "::" (ProcV ("a", FunExp (["b"], BinOp (Cons, (Var "a"), (Var "b"))), ref Environment.empty))
-				    (Environment.extend "*" (ProcV ("a", FunExp (["b"], BinOp (Mult, (Var "a"), (Var "b"))), ref Environment.empty)) Environment.empty)))))))))))
+		     (Environment.extend "(+)" (ProcV ("a", FunExp (["b"], BinOp (Plus, (Var "a"), (Var "b"))), ref Environment.empty))
+			(Environment.extend "(<)" (ProcV ("a", FunExp (["b"], BinOp (Lt, (Var "a"), (Var "b"))), ref Environment.empty))
+			   (Environment.extend "(&&)" (ProcV ("a", FunExp (["b"], BinOp (And, (Var "a"), (Var "b"))), ref Environment.empty))
+			      (Environment.extend "(||)" (ProcV ("a", FunExp (["b"], BinOp (Or, (Var "a"), (Var "b"))), ref Environment.empty))
+				 (Environment.extend "(::)" (ProcV ("a", FunExp (["b"], BinOp (Cons, (Var "a"), (Var "b"))), ref Environment.empty))
+				    (Environment.extend "(*)" (ProcV ("a", FunExp (["b"], BinOp (Mult, (Var "a"), (Var "b"))), ref Environment.empty)) Environment.empty)))))))))))
+
+let initial_tyvar' = fresh_tyvar ()
+let initial_tyvar = TyVar initial_tyvar'
 
 let initial_tyenv = 
-  Environment.extend "i" TyInt
-    (Environment.extend "v"  TyInt
-       (Environment.extend "x"  TyInt
-           (Environment.extend "ii" TyInt
-               (Environment.extend "iii" TyInt
-		  (Environment.extend "iv" TyInt
-		     (Environment.extend "+" (TyFun (TyInt, TyFun (TyInt, TyInt)))
-			(Environment.extend "<" (TyFun (TyInt, TyFun (TyInt, TyBool)))
-			   (Environment.extend "&&" (TyFun (TyBool, TyFun (TyBool, TyBool)))
-			      (Environment.extend "||" (TyFun (TyBool, TyFun (TyBool, TyBool)))
-				    (Environment.extend "*" (TyFun (TyInt, TyFun (TyInt, TyInt))) Environment.empty))))))))))
-(*(Environment.extend "(::)" (TyFunc (TyVar, TyFunc (TyInt, TyInt)))*)
+  Environment.extend "i" (TyScheme ([], TyInt))
+    (Environment.extend "v"  (TyScheme ([], TyInt))
+       (Environment.extend "x"  (TyScheme ([], TyInt))
+           (Environment.extend "ii" (TyScheme ([], TyInt))
+               (Environment.extend "iii" (TyScheme ([], TyInt))
+		  (Environment.extend "iv" (TyScheme ([], TyInt))
+		     (Environment.extend "(+)" (TyScheme ([], TyFun (TyInt, TyFun (TyInt, TyInt))))
+			(Environment.extend "(<)" (TyScheme ([], TyFun (TyInt, TyFun (TyInt, TyBool))))
+			   (Environment.extend "(&&)" (TyScheme ([], TyFun (TyBool, TyFun (TyBool, TyBool))))
+			      (Environment.extend "(||)" (TyScheme ([], TyFun (TyBool, TyFun (TyBool, TyBool))))
+				 (Environment.extend "(::)" (TyScheme ([initial_tyvar'], TyFun (initial_tyvar, TyFun (TyList initial_tyvar, TyList initial_tyvar))))
+				    (Environment.extend "(*)" (TyScheme ([], TyFun (TyInt, TyFun (TyInt, TyInt)))) Environment.empty)))))))))))
+
 let _ = read_eval_print initial_env initial_tyenv

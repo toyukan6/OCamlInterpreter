@@ -42,6 +42,7 @@ let rec apply_prim op arg1 arg2 = match op, arg1, arg2 with
   | Or, _, _ -> err ("Both arguments must be bool: ||")
   | Cons, IntV i, ListV l -> ListV ((IntV i) :: l)
   | Cons, BoolV b, ListV l -> ListV ((BoolV b) :: l)
+  | Cons, ListV l1, ListV l2 -> ListV ((ListV l1) :: l2)
   | Cons, _, _ -> err ("Both arguments must be equal: ::") 
 
 let uncurry f = fun (x, y) -> f x y
@@ -70,7 +71,8 @@ let rec eval_exp env = function
 	   (IntV var1, IntCond var2) -> (var1 = var2, e)
 	 | (BoolV var1, BoolCond var2) -> (var1 = var2, e)
 	 | (var1, VarCond id) -> (true, Environment.extend id var1 e)
-	 | (ListV [], NullListCond) -> (true, e)
+	 | (ListV [], NullListCond)
+	 | (ListV _, ListCond [Underbar]) -> (true, e)
 	 | (ListV _ as l, ListCond [VarCond id]) -> (true, Environment.extend id l e)
 	 | (ListV (head :: tail), ListCond (hc :: tc)) ->
 	   let (b, newenv) = condEqual head hc e in
@@ -86,6 +88,7 @@ let rec eval_exp env = function
 		fold_right (fun (ex, co) (bo, en) -> let (boo, nen) = condEqual ex co en in (boo && bo, nen)) clist (true, e) in
 	      if b then (true, newenv) else (false, e)
 	    with Invalid_argument _ -> (false, e))
+	 | (_, Underbar) -> (true, e)
 	 | _ -> (false, e) in
      let rec searchcond list =
        match list with
