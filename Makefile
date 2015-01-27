@@ -15,7 +15,7 @@ OBJS=mySet.cmo syntax.cmo parser.cmo lexer.cmo environment.cmo typing.cmo eval.c
 DEPEND += lexer.ml parser.ml
 
 all: $(DEPEND) $(OBJS)
-	$(OCAMLC) -o $(PROGNAME) $(OCAMLFLAGS) $(OBJS)
+	$(OCAMLC) -o $(PROGNAME) $(OCAMLFLAGS) str.cma $(OBJS)
 
 # Common rules
 .SUFFIXES: .ml .mli .cmo .cmi .cmx

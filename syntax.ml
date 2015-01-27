@@ -51,7 +51,7 @@ let rec make_app v = function
 type program = 
     Exp of exp
   | Decl of (id list * exp) list * program option
-  | RecDecl of (id list * exp) list;;
+  | RecDecl of (id list * exp) list
 
 type tyvar = int
 

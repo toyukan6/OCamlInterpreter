@@ -9,3 +9,4 @@ lexer.ml
 parser.ml
 miniml
 .depend
+*.txt
